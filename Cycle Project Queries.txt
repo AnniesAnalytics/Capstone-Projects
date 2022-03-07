@@ -1,0 +1,416 @@
+﻿Ok, so here is all the information that I want to see…
+
+
+SELECT 
+    start_time,
+    tripduration,
+    usertype,
+    gender, 
+    birthyear,
+    _01___Rental_Details_Duration_In_Seconds_Uncapped,
+    _01___Rental_Details_Local_Start_Time,
+    User_Type,
+    Member_Gender,
+    _05___Member_Details_Member_Birthday_Year
+ FROM `cycle-data-342621.cycle_data.2019_Q1` AS Q1
+ FULL OUTER JOIN 
+    cycle-data-342621.cycle_data.2019_Q2 AS Q2 ON Q1.usertype = Q2.user_type
+
+
+^^ This was way too much information. After 16 minutes, I aborted this operation. Let’s try something simpler?
+
+
+SELECT 
+    AVG(tripduration),
+    AVG(_01___Rental_Details_Duration_In_Seconds_Uncapped)
+ FROM `cycle-data-342621.cycle_data.2019_Q1` AS Q1
+ FULL OUTER JOIN 
+    cycle-data-342621.cycle_data.2019_Q2 AS Q2 ON Q1.usertype = Q2.user_type
+
+
+After 4 minutes, I had to cancel this one too. What gives? Ok let’s look individually.
+
+
+SELECT 
+AVG(tripduration)
+ FROM `cycle-data-342621.cycle_data.2019_Q1` 
+WHERE usertype = "Subscriber"
+(        833.4669178078134)
+
+
+SELECT 
+AVG(tripduration)
+ FROM `cycle-data-342621.cycle_data.2019_Q1` 
+WHERE usertype = "Customer"
+(3715.7375987566475)
+SELECT AVG(_01___Rental_Details_Duration_In_Seconds_Uncapped) 
+FROM `cycle-data-342621.cycle_data.2019_Q2` 
+(1327.2901269941033) 
+
+
+SELECT AVG(_01___Rental_Details_Duration_In_Seconds_Uncapped) 
+FROM `cycle-data-342621.cycle_data.2019_Q2` 
+WHERE user_type = "Subscriber"
+(842.832487800156)
+
+
+“Customer”
+2910.9641698704413
+
+
+Ok… so maybe I should clean my data first.
+
+
+SELECT
+    _01___Rental_Details_Duration_In_Seconds_Uncapped AS trip_duration
+FROM cycle-data-342621.cycle_data.2019_Q2 
+
+
+Ok! That worked!
+
+
+SELECT
+   _01___Rental_Details_Local_Start_Time AS start_time, 
+   _03___Rental_Start_Station_Name AS start_station_name,
+   _01___Rental_Details_Duration_In_Seconds_Uncapped AS trip_duration
+FROM cycle-data-342621.cycle_data.2019_Q2 
+
+
+SELECT
+   _02___Rental_End_Station_Name AS end_station, 
+   Member_Gender AS gender,
+   _05___Member_Details_Member_Birthday_Year AS birthday
+FROM cycle-data-342621.cycle_data.2019_Q2
+
+
+These are the columns I am already thinking I will be analyzing.
+After refreshing the page, it looks like this did not alter the original table.
+
+
+SELECT
+    _01___Rental_Details_Duration_In_Seconds_Uncapped AS trip_duration,
+    _01___Rental_Details_Local_Start_Time AS start_time, 
+   _03___Rental_Start_Station_Name AS start_station_name,
+   _01___Rental_Details_Duration_In_Seconds_Uncapped AS trip_duration,
+   _02___Rental_End_Station_Name AS end_station, 
+   Member_Gender AS gender,
+   _05___Member_Details_Member_Birthday_Year AS birthday
+FROM cycle-data-342621.cycle_data.2019_Q2
+
+
+I tried overwriting the original table by going into the query settings and telling it to overwrite but after it executed, nothing had changed. 
+
+
+next I made a new table by executing the results of 
+SELECT AVG(_01___Rental_Details_Duration_In_Seconds_Uncapped) 
+FROM `cycle-data-342621.cycle_data.2019_Q2` 
+
+
+And then I thought I would need to identify this data, so I created a new column 
+
+
+ALTER TABLE `cycle-data-342621.cycle_data.2019_Q2`
+ADD COLUMN member_type string
+
+
+ Then I wanted to add data 
+
+
+INSERT INTO `cycle-data-342621.cycle_data.analyzed` (member_type)
+VALUES ('Average 2019 Q2')
+
+
+Time to check it out
+
+
+Select *
+FROM cycle-data-342621.cycle_data.analyzed 
+
+
+Something went wrong, because there is now a row with the average and no member type, and no average on the member type.
+
+
+Now I am thinking I will just make and name all of the columns I need and go from there. 
+
+
+SELECT AVG(tripduration) AS avg_2019_Q1
+ FROM `cycle-data-342621.cycle_data.2019_Q1`
+
+
+SELECT AVG(tripduration) AS avg_2019_Q1_subscriber
+ FROM `cycle-data-342621.cycle_data.2019_Q1` 
+ WHERE usertype = "Subscriber"
+
+
+This did not work either. 
+My new plan is that Im just going to make my own spreadsheet for this data. If I want to do it differently in the future, then so it will be. 
+
+
+SELECT AVG(tripduration) AS avg_2019_Q1
+ FROM `cycle-data-342621.cycle_data.2019_Q1`
+
+
+SELECT AVG(tripduration)
+ FROM `cycle-data-342621.cycle_data.2019_Q1`
+WHERE usertype = "Subscriber"
+
+
+I thought finding the median could be interesting, but it is not supported
+SELECT PERCENTILE_CONT(tripduration, 0.5)  
+ FROM `cycle-data-342621.cycle_data.2019_Q1`
+Maybe this is an R operation for later. 
+
+
+SELECT COUNT(gender)
+ FROM `cycle-data-342621.cycle_data.2019_Q1`
+WHERE usertype = "Customer" 
+
+
+SELECT COUNT(gender)
+ FROM `cycle-data-342621.cycle_data.2019_Q1`
+WHERE usertype = "Customer" AND gender = "Female"
+
+
+
+
+I continued this for each category of subscriber, customer, male, female, and total. I double checked my work by adding male + female totals in sheets and checking against the total from SQL and they checked out. I also wanted to check there was only two genders listed.
+
+
+SELECT COUNT(DISTINCT gender)
+ FROM `cycle-data-342621.cycle_data.2019_Q1`
+ 
+=2
+Time to do the exact same thing with each of the datasets and add to my new sheet. ex:
+
+
+SELECT AVG(_01___Rental_Details_Duration_In_Seconds_Uncapped)
+ FROM `cycle-data-342621.cycle_data.2019_Q2` 
+
+
+SELECT COUNT(Member_Gender)
+ FROM `cycle-data-342621.cycle_data.2019_Q2`
+WHERE User_Type = "Subscriber" AND Member_Gender = "Male"
+
+
+The 2020 data is set up differently. I need to investigate it more.
+
+
+SELECT COUNT(DISTINCT member_casual)
+FROM `cycle-data-342621.cycle_data.2020_Q1` 
+
+
+= 2
+
+
+Ok so now member casual seems to have replaced usertype? What is the other usertype besides casual? I can only see “casual” in the preview.
+
+
+SELECT (member_casual)
+FROM `cycle-data-342621.cycle_data.2020_Q1` 
+ORDER BY member_casual DESC
+LIMIT 20
+
+
+Member is the other.
+So that means there are two types - member, and casual. Thats why they made the title of the row member_casual. It is member OR casual. 
+
+
+My assumption is that member = subscriber and casual = customer.
+
+
+The next problem is that I do not see a duration column. 
+
+
+I tried to append this data to the table:
+SELECT 
+    started_at,
+    ended_at,
+    member_casual,
+    ended_at-started_at AS duration
+FROM `cycle-data-342621.cycle_data.2020_Q1` 
+ 
+
+
+But it would not let me. So I ran it as a temporary table. Then I decided to make it into a new table. 
+
+
+I tried to make the duration more readable as it is currently in this format when I searched for the average : 0-0 0 0:22:6.906281990
+
+
+SELECT
+     CAST(duration AS FLOAT64)
+FROM cycle-data-342621.cycle_data.2020_analyzed 
+ORDER BY member_casual
+
+
+I know that the format for intervals in SQL is DD HH:MM:SS so the avg is 0 days 0 hrs 22 mins 6.9… seconds. But it looks like all of the previous results have been stored in float in seconds, not minutes. I suppose for now I could just manually convert this because after many searches I am not sure how to get it to convert to seconds. I tried multiplying by 60 in the query but only got 22:6:54.376919400 …. That doesnt help. 
+I decided to just put it in sheets and make sure sheets knows the correct format and bookmark to myself that this is a skill that needs work.
+
+
+I am also just now realizing that they stopped storing member gender in this most recent table which seems like an oversight to me. 
+I took the time in minutes and converted it to seconds by just multiplying the minutes (and hours) by 60 and then inputting that as just a regular number. I found online you could use DECLARE @time TIME = '20:10:10'
+select total_seconds =DATEDIFF(second,0,cast(@time as datetime))
+But this looks to me like it would only change a singular date.
+
+
+Alright, so maybe I will try figuring out more information about the different bike types. 
+
+
+I went back into sheets and did manage to upload some of my files into there and get them working. This allowed me to go into 2020 Q1 and calculate trip duration, as well as day of the week. I also renamed some categories. I did some renaming in 2019 Q4, and discovered that the dates are all listed as the same so I cannot pull weekday data from that. 
+
+
+Next, I figured out how to pull weekdays in SQL! Thanks to some help from discord. 
+
+
+SELECT _01_Rental_Details_Local_Start_Time, 
+extract(DAYOFWEEK from 01_Rental_Details_Local_Start_Time) as dow_num FROM cycle-data-342621.cycle_data.2019_Q2 
+ORDER BY dow_num
+
+
+I made a new table with that data, and added in duration as well. Then I got the Average duration and average DOW. There will be more with this but I got started. Just testing it out. 
+
+
+SELECT 
+    AVG(duration) AS avg_duration,
+    AVG(dow_num) AS avg_dow
+FROM `cycle-data-342621.cycle_data.2019_Q2_analyzed` LIMIT 1000
+
+
+I decided screw this, im making a new table!! Big Query wont let me append to tables
+
+
+SELECT 
+    _01___Rental_Details_Rental_ID AS ID,
+    _01___Rental_Details_Local_Start_Time AS start_time,
+    _01___Rental_Details_Duration_In_Seconds_Uncapped AS duration,
+    _03___Rental_Start_Station_Name AS start_station,
+    User_Type AS user_type, 
+    Member_Gender AS gender,     
+    _05___Member_Details_Member_Birthday_Year AS birthyear,
+    EXTRACT(DAYOFWEEK from _01___Rental_Details_Local_Start_Time) AS dow_num
+ FROM `cycle-data-342621.cycle_data.2019_Q2` 
+
+
+SELECT 
+    start_time, 
+    tripduration AS duration,
+    from_station_name AS start_station,
+    usertype AS user_type,
+    gender, 
+    birthyear,
+    EXTRACT(DAYOFWEEK from start_time) AS dow_num
+FROM `cycle-data-342621.cycle_data.2019_Q1` 
+
+
+Lets just make sure all is good
+SELECT COUNT(DISTINCT dow_num) FROM `cycle-data-342621.cycle_data.2019_Q2_analyzed` LIMIT 1000
+Also ran Q1. Got 7. Good. 
+Now that I have DOW data, let’s find out more
+SELECT 
+COUNT (dow_num) AS Sunday
+ FROM `cycle-data-342621.cycle_data.2019_Q1_analyzed` 
+ WHERE dow_num = 1 AND user_type = "Customer"
+
+
+I ran this a couple of different ways to find out data on subscribers, customers, total, and each day of the week. My goal with this was to tell me how many trips were taken on each day of the week. After I ran this, I also used =AVERAGE in sheets where I was storing my data to find the average number of trips taken on a weekday vs weekend day for each of the three categories. 
+Okay, now that I have done that, there must be a faster way. Let me see……:
+
+
+SELECT 
+    SUM(IF(dow_num=1,1,0)) AS Sunday,
+    SUM(IF(dow_num=2,1,0)) AS Monday
+ FROM `cycle-data-342621.cycle_data.2019_Q1_analyzed` 
+
+
+That worked! It returned the same answer as I got before but split into categories.
+
+
+SELECT 
+    SUM(IF(dow_num=1,1,0)) AS Sunday,
+    SUM(IF(dow_num=2,1,0)) AS Monday, 
+    SUM(IF(dow_num=3,1,0)) AS Tuesday,
+    SUM(IF(dow_num=4,1,0)) AS Wednesday,
+    SUM(IF(dow_num=5,1,0)) AS Thursday,
+    SUM(IF(dow_num=6,1,0)) AS Friday,
+    SUM(IF(dow_num=7,1,0)) AS Saturday
+ FROM `cycle-data-342621.cycle_data.2019_Q1_analyzed` 
+
+
+I also checked out the WHERE ones to make sure I had that.
+
+
+SELECT 
+    SUM(IF(dow_num=1,1,0)) AS Sunday,
+    SUM(IF(dow_num=2,1,0)) AS Monday, 
+    SUM(IF(dow_num=3,1,0)) AS Tuesday,
+    SUM(IF(dow_num=4,1,0)) AS Wednesday,
+    SUM(IF(dow_num=5,1,0)) AS Thursday,
+    SUM(IF(dow_num=6,1,0)) AS Friday,
+    SUM(IF(dow_num=7,1,0)) AS Saturday
+ FROM `cycle-data-342621.cycle_data.2019_Q1_analyzed` 
+ WHERE user_type = "Customer"
+
+
+SELECT 
+    SUM(IF(Day_of_week=1,1,0)) AS Sunday,
+    SUM(IF(Day_of_week=2,1,0)) AS Monday, 
+    SUM(IF(Day_of_week=3,1,0)) AS Tuesday,
+    SUM(IF(Day_of_week=4,1,0)) AS Wednesday,
+    SUM(IF(Day_of_week=5,1,0)) AS Thursday,
+    SUM(IF(Day_of_week=6,1,0)) AS Friday,
+    SUM(IF(Day_of_week=7,1,0)) AS Saturday
+ FROM `cycle-data-342621.cycle_data.2020_Q1` 
+ WHERE user_type = "Member"
+
+
+Next I went into sheets and I calculated the max for each category and then used that to find the mode day of the week (most frequent riding day) per category. 
+
+
+I realized somewhere in the totals calculations I made an error. I wonder if bigquery cut off my results.  I reran some, more quickly
+
+
+SELECT 
+    COUNT(IF(User_Type="Subscriber",1,null)),
+    COUNT(IF(User_Type="Customer",1,null)),
+    COUNT(User_Type)
+FROM cycle-data-342621.cycle_data.2019_Q2 
+
+
+SELECT 
+    COUNT(IF(User_type="casual",1,null)),
+    COUNT(IF(User_type="member",1,null)),
+    COUNT(User_type)
+FROM cycle-data-342621.cycle_data.2020_Q1
+
+
+Now let’s look at bike type. Only q1 of 2020 has this info. 
+SELECT COUNT(Bike_type)
+FROM `cycle-data-342621.cycle_data.2020_Q1` 
+WHERE Bike_type = "docked_bike" AND User_type = "member"
+
+
+It was not letting me pull an AVG from my duration columns so I tried:
+SELECT AVG(
+    (ended_at-started_at))
+FROM `cycle-data-342621.cycle_data.2020_Q1` 
+WHERE Bike_type = "docked_bike" 
+
+
+It actually worked! Now I just have to convert it to seconds…. 
+0-0 0 0:22:6.906281990
+	22*60 + :6.906281990 = 
+
+
+I think it would be good to compare data from the last few years to see a trend of how usership is changing. I uploaded Q1 data from 2017-present.
+SELECT 
+    COUNT(IF(usertype="Subscriber",1,null)) AS sub,
+    COUNT(IF(usertype="Customer",1,null)) AS cus,
+    COUNT(usertype) AS count
+FROM cycle-data-342621.cycle_data.2017_Q1
+Did a bunch of variations of this:
+
+
+SELECT 
+    AVG(_01___Rental_Details_Duration_In_Seconds_Uncapped)
+FROM cycle-data-342621.cycle_data.2019_Q2
+WHERE Member_gender = "Male" AND User_Type = "Customer"
